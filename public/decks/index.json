@@ -2,49 +2,42 @@
   {
     "id": "japan-capitals",
     "title": "日本の都道府県 → 県庁所在地",
-    "description": "",
     "file": "japan-capitals.json",
     "count": 47
   },
   {
     "id": "advanced-climate",
     "title": "気候グラフ読解（上級）",
-    "description": "地形断面・季節風・海流を手掛かりに都市/気候区を同定",
     "file": "advanced-climate.json",
     "count": 12
   },
   {
     "id": "landforms-reading",
     "title": "地形図・地形断面（上級）",
-    "description": "等高線/地形用語から成因まで推論",
     "file": "landforms-reading.json",
     "count": 12
   },
   {
     "id": "industry-location",
     "title": "工業立地を分析（上級）",
-    "description": "原料・市場・内陸・交通・政策の総合判断",
     "file": "industry-location.json",
     "count": 12
   },
   {
     "id": "agriculture-inference",
-    "title": "農牧の立地を作図&推論（上級）",
-    "description": "気候・地形・市場距離・水利から最適作目を推論",
+    "title": "農牧の立地を作図＆推論（上級）",
     "file": "agriculture-inference.json",
     "count": 12
   },
   {
     "id": "trade-statistics",
     "title": "貿易統計とエネルギー（難問）",
-    "description": "時系列/相手国構成・季節変動を説明",
     "file": "trade-statistics.json",
     "count": 10
   },
   {
     "id": "population-pyramids",
     "title": "人口ピラミッド読解（上級）",
-    "description": "年齢構成から医療・福祉・雇用を推論",
     "file": "population-pyramids.json",
     "count": 10
   }
