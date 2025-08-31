@@ -210,6 +210,7 @@ export default function App() {
   const [deck, setDeck] = useState<Deck | null>(null);
   const [save, setSave] = useState<SaveBlob | null>(null);
   const [currentIdx, setCurrentIdx] = useState<number>(0);
+  const [flash, setFlash] = useState<{ text: string; ok: boolean } | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -313,21 +314,40 @@ export default function App() {
   const card = useMemo(() => (deck ? deck.cards[currentIdx ?? nextIndex] ?? null : null), [deck, currentIdx, nextIndex]);
 
   function onAnswer(ok: boolean) {
-    if (!deck || !card) return;
-    const id = card.id!;
-    const t = now();
-    updateSave((draft) => {
-      const cur = draft.perCard[id] ?? { box: 0, next: 0, streak: 0 };
-      if (ok) {
-        const nb = Math.min(cur.box + 1, BOX_INTERVAL_MS.length - 1);
-        draft.perCard[id] = { box: nb, next: t + BOX_INTERVAL_MS[nb], streak: cur.streak + 1 };
-      } else {
-        draft.perCard[id] = { box: 0, next: t + BOX_INTERVAL_MS[1], streak: 0 };
-      }
-    });
-    setCurrentIdx(nextIndex);
-  }
+  if (!deck || !card) return;
+  const id = card.id!;
+  const t = now();
 
+  let newStreakLocal = 0;
+
+  updateSave((draft) => {
+    const cur = draft.perCard[id] ?? { box: 0, next: 0, streak: 0 };
+    if (ok) {
+      const nb = Math.min(cur.box + 1, BOX_INTERVAL_MS.length - 1);
+      newStreakLocal = cur.streak + 1;
+      draft.perCard[id] = { box: nb, next: t + BOX_INTERVAL_MS[nb], streak: newStreakLocal };
+    } else {
+      newStreakLocal = 0;
+      draft.perCard[id] = { box: 0, next: t + BOX_INTERVAL_MS[1], streak: 0 };
+    }
+  });
+
+  // フィードバック（効果音／🎉／メッセージ）
+  if (ok) {
+    sfxOK();
+    burstEmojiConfetti();
+    const msg = `${PRAISE[(Math.random() * PRAISE.length) | 0]}（連続${newStreakLocal}）`;
+    setFlash({ text: msg, ok: true });
+  } else {
+    sfxNG();
+    setFlash({ text: ENCOURAGE[(Math.random() * ENCOURAGE.length) | 0], ok: false });
+  }
+  setTimeout(() => setFlash(null), 1200);
+
+  // 次のカードへ
+  setCurrentIdx(nextIndex);
+}
+  
   function resetDeck() {
     if (!deck) return;
     if (!confirm("このデッキの学習履歴をリセットします。よろしいですか？")) return;
@@ -426,6 +446,24 @@ export default function App() {
           }}
         />
       </div>
+{/* 正解/不正解の一時メッセージ */}
+{flash && (
+  <div
+    aria-live="polite"
+    style={{
+      marginTop: 16,
+      marginBottom: 8,
+      padding: "10px 12px",
+      borderRadius: 8,
+      color: flash.ok ? "#065f46" : "#7f1d1d",
+      background: flash.ok ? "#d1fae5" : "#fee2e2",
+      border: `1px solid ${flash.ok ? "#10b981" : "#ef4444"}`,
+      fontWeight: 700,
+    }}
+  >
+    {flash.text}
+  </div>
+)}
 
       {/* カード */}
       {card ? (
