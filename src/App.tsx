@@ -1,5 +1,138 @@
 import { useEffect, useMemo, useState } from "react";
 
+/***** かりんちゃん専用の褒め言葉／励まし *****/
+const PRAISE = [
+  "かりんちゃん、完璧！", "ナイス集中力！", "いいね、その調子！",
+  "秒速で正解、天才！", "キレッキレ！", "地理王への道まっしぐら！",
+  "見事！", "判断が速い！", "かりんちゃん、覚え方がうまい！",
+  "積み上げが効いてる！", "連続正解が気持ちいい！", "今日は冴えてる！",
+  "正確で美しい！", "学習効率MAX！", "スゴい記憶力！",
+  "ばっちり！", "安定感ハンパない！", "プロフェッショナル！",
+  "医学部合格モード突入！", "高得点の未来が見える！",
+];
+
+const ENCOURAGE = [
+  "惜しい！今ので覚えたよ", "大丈夫、かりんちゃんは確実に強くなってる",
+  "ヒント見てからでOK！", "丁寧に行こう、次は取れる",
+  "ここで覚えれば勝ち！", "あと少し、いける！", "焦らずもう一回！",
+  "一歩ずつ確実に！", "ここで踏ん張るのが地力！",
+];
+
+const ENABLE_SFX = true;        // 効果音ON/OFF
+const ENABLE_CONFETTI = true;   // 絵文字コンフェッティON/OFF
+
+/***** WebAudio：効果音（外部ファイル不要） *****/
+let _ac: AudioContext | null = null;
+function ac() {
+  if (!_ac) _ac = new (window.AudioContext || (window as any).webkitAudioContext)();
+  return _ac!;
+}
+
+function tone(freq: number, ms = 140, type: OscillatorType = "sine", gain = 0.06) {
+  const ctx = ac();
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = type;
+  osc.frequency.value = freq;
+  g.gain.value = gain;
+  osc.connect(g).connect(ctx.destination);
+  const t0 = ctx.currentTime;
+  osc.start(t0);
+  osc.stop(t0 + ms / 1000);
+}
+
+function sfxOK() {
+  if (!ENABLE_SFX) return;
+  tone(880, 90, "triangle", 0.05);
+  setTimeout(() => tone(1175, 120, "triangle", 0.05), 90);
+  setTimeout(() => { tone(1568, 140, "sine", 0.035); tone(1976, 140, "sine", 0.03); }, 140);
+  if (navigator.vibrate) navigator.vibrate(15);
+}
+
+function sfxNG() {
+  if (!ENABLE_SFX) return;
+  const ctx = ac();
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  osc.type = "sawtooth";
+  osc.frequency.value = 220;
+  g.gain.value = 0.05;
+  osc.connect(g).connect(ctx.destination);
+  const t0 = ctx.currentTime;
+  const lfo = ctx.createOscillator();
+  const lfoGain = ctx.createGain();
+  lfo.frequency.value = 7;
+  lfoGain.gain.value = 20;
+  lfo.connect(lfoGain).connect(osc.frequency);
+  osc.start(t0);
+  lfo.start(t0);
+  osc.stop(t0 + 0.22);
+  lfo.stop(t0 + 0.22);
+  if (navigator.vibrate) navigator.vibrate(60);
+}
+
+/***** 🎉絵文字コンフェッティ *****/
+const EMOJIS = ["🎉","🎊","✨","👏","🌟","🎈","🗺️","📍","📚","💫","⭐️","🧠","💡"];
+
+let confettiRoot: HTMLDivElement | null = null;
+(function injectConfettiCSS(){
+  const id = "emoji-confetti-style";
+  if (document.getElementById(id)) return;
+  const css = `
+  @keyframes fall-emoji {
+    0% { transform: translateY(-10vh) rotate(0deg); opacity: 0;}
+    10%{ opacity: 1;}
+    100%{ transform: translateY(110vh) rotate(720deg); opacity: 0.9; }
+  }`;
+  const style = document.createElement("style");
+  style.id = id;
+  style.textContent = css;
+  document.head.appendChild(style);
+})();
+
+function getConfettiRoot() {
+  if (!confettiRoot) {
+    confettiRoot = document.createElement("div");
+    Object.assign(confettiRoot.style, {
+      position: "fixed",
+      inset: "0",
+      zIndex: "9999",
+      pointerEvents: "none",
+      overflow: "hidden",
+    });
+    document.body.appendChild(confettiRoot);
+  }
+  return confettiRoot!;
+}
+
+function burstEmojiConfetti() {
+  if (!ENABLE_CONFETTI) return;
+  const root = getConfettiRoot();
+  const W = window.innerWidth;
+  const N = Math.min(36, Math.max(16, Math.floor(W / 25)));
+  for (let i = 0; i < N; i++) {
+    const span = document.createElement("span");
+    span.textContent = EMOJIS[(Math.random() * EMOJIS.length) | 0];
+    const left = Math.random() * 100;
+    const dur = 1.6 + Math.random() * 1.7;
+    const delay = Math.random() * 0.15;
+    const size = 18 + Math.random() * 16;
+
+    Object.assign(span.style, {
+      position: "absolute",
+      left: `${left}vw`,
+      top: "-10vh",
+      fontSize: `${size}px`,
+      animation: `fall-emoji ${dur}s linear ${delay}s 1 both`,
+      filter: "drop-shadow(0 2px 2px rgba(0,0,0,.15))",
+    } as CSSStyleDeclaration);
+
+    root.appendChild(span);
+    setTimeout(() => root.removeChild(span), (dur + delay) * 1000 + 50);
+  }
+}
+
+
 /** ---------- 型 ---------- */
 type Card = { id?: string; front: string; back: string; hint?: string };
 type Deck = { id?: string; title: string; description?: string; cards: Card[] };
