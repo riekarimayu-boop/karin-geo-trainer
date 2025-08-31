@@ -1,7 +1,15 @@
 [
   {
+    "id": "japan-capitals-4choice",
+    "title": "日本の都道府県 → 県庁所在地（4択）",
+    "description": "共通テスト風4択。効果音＆🎉つき！",
+    "file": "japan-capitals-4choice.json",
+    "count": 47
+  },
+  {
     "id": "japan-capitals",
-    "title": "日本の都道府県 → 県庁所在地",
+    "title": "日本の都道府県 → 県庁所在地（短答）",
+    "description": "短答版",
     "file": "japan-capitals.json",
     "count": 47
   },
@@ -42,10 +50,3 @@
     "count": 10
   }
 ]
-{
-  "id": "japan-capitals-4choice",
-  "title": "日本の都道府県 → 県庁所在地（4択）",
-  "description": "共通テスト風4択。効果音＆🎉つき！",
-  "file": "japan-capitals-4choice.json",
-  "count": 47
-}
