@@ -17,8 +17,8 @@ const ENCOURAGE = [
   "一歩ずつ確実に！","ここで踏ん張るのが地力！",
 ];
 
-const ENABLE_SFX = true;
-const ENABLE_CONFETTI = true;
+const ENABLE_SFX = true;        // 効果音ON/OFF
+const ENABLE_CONFETTI = false;  // ← ここを false に
 
 /***** 効果音（WebAudio） *****/
 let _ac: AudioContext | null = null;
