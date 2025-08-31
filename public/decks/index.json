@@ -1,8 +1,8 @@
 [
   {
-    "id": "japan-capitals-01",
-    "title": "都道府県 → 県庁所在地",
-    "path": "/decks/japan-capitals.json",
-    "count": 7
+    "id": "japan-capitals",
+    "title": "日本の都道府県 → 県庁所在地",
+    "count": 3,
+    "file": "japan-capitals.json"
   }
 ]
