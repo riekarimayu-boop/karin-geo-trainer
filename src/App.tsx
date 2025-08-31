@@ -1,4 +1,23 @@
 import { useEffect, useMemo, useState } from "react";
+// 画面最上位に被っている固定レイヤーを発見したら無効化（保険）
+(function killBadOverlays() {
+  if (typeof window === "undefined") return;
+  const fix = () => {
+    const all = Array.from(document.querySelectorAll<HTMLElement>("body > *"));
+    for (const el of all) {
+      const st = getComputedStyle(el);
+      const zi = parseInt(st.zIndex || "0", 10);
+      if ((st.position === "fixed" || st.position === "absolute") && zi >= 9990) {
+        el.style.pointerEvents = "none";
+        el.style.zIndex = "0";
+      }
+    }
+  };
+  // 初期描画後と、ロード完了時の2回実行
+  setTimeout(fix, 0);
+  window.addEventListener("load", fix);
+})();
+
 
 /***** かりんちゃん専用の褒め言葉／励まし *****/
 const PRAISE = [
@@ -46,15 +65,50 @@ let confettiRoot: HTMLDivElement | null = null;
   10%{opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:.9}}`;
   document.head.appendChild(style);
 })();
-function getConfettiRoot(){ if(!confettiRoot){ confettiRoot=document.createElement("div"); Object.assign(confettiRoot.style,{
-  position:"fixed", inset:"0", zIndex:"9999", pointerEvents:"none", overflow:"hidden"}); document.body.appendChild(confettiRoot);} return confettiRoot!; }
-function burstEmojiConfetti(){
-  if(!ENABLE_CONFETTI) return; const root=getConfettiRoot(); const W=window.innerWidth; const N=Math.min(36, Math.max(16, Math.floor(W/25)));
-  for(let i=0;i<N;i++){ const span=document.createElement("span"); span.textContent=EMOJIS[(Math.random()*EMOJIS.length)|0];
-    const left=Math.random()*100, dur=1.6+Math.random()*1.7, delay=Math.random()*0.15, size=18+Math.random()*16;
-    Object.assign(span.style,{position:"absolute",left:`${left}vw`,top:"-10vh",fontSize:`${size}px`,
-      animation:`fall-emoji ${dur}s linear ${delay}s 1 both`, filter:"drop-shadow(0 2px 2px rgba(0,0,0,.15))"} as CSSStyleDeclaration);
-    root.appendChild(span); setTimeout(()=>root.removeChild(span),(dur+delay)*1000+50); }
+
+function getConfettiRoot() {
+  if (!confettiRoot) {
+    confettiRoot = document.createElement("div");
+    document.body.appendChild(confettiRoot);
+  }
+  // 既存があっても毎回「安全なスタイル」を上書き
+  Object.assign(confettiRoot.style, {
+    position: "fixed",
+    inset: "0",
+    zIndex: "0",            // ← ここ重要！（9999 を 0 に）
+    pointerEvents: "none",  // クリックは一切拾わない
+    overflow: "hidden",
+  } as CSSStyleDeclaration);
+  return confettiRoot!;
+}
+
+
+function burstEmojiConfetti() {
+  if (!ENABLE_CONFETTI) return;
+  const root = getConfettiRoot();
+  const W = window.innerWidth;
+  const N = Math.min(36, Math.max(16, Math.floor(W / 25)));
+  for (let i = 0; i < N; i++) {
+    const span = document.createElement("span");
+    span.textContent = EMOJIS[(Math.random() * EMOJIS.length) | 0];
+    const left = Math.random() * 100;
+    const dur = 1.6 + Math.random() * 1.7;
+    const delay = Math.random() * 0.15;
+    const size = 18 + Math.random() * 16;
+
+    Object.assign(span.style, {
+      position: "absolute",
+      left: `${left}vw`,
+      top: "-10vh",
+      fontSize: `${size}px`,
+      animation: `fall-emoji ${dur}s linear ${delay}s 1 both`,
+      filter: "drop-shadow(0 2px 2px rgba(0,0,0,.15))",
+      pointerEvents: "none",  // ← ここ！オブジェクトの中に
+    } as CSSStyleDeclaration);
+
+    root.appendChild(span);
+    setTimeout(() => root.removeChild(span), (dur + delay) * 1000 + 50);
+  }
 }
 
 /***** 型 *****/
