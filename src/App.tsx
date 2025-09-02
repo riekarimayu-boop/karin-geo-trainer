@@ -103,8 +103,9 @@ function burstEmojiConfetti() {
       top: "-10vh",
       fontSize: `${size}px`,
       animation: `fall-emoji ${dur}s linear ${delay}s 1 both`,
-      filter: "drop-shadow(0 2px 2px rgba(0,0,0,.15))`,
-      /** ← これをオブジェクトの中に置く */
+      // 影をつける（ここはダブルクォートで閉じる）
+      filter: "drop-shadow(0 2px 2px rgba(0,0,0,.15))",
+      // クリックを遮らない
       pointerEvents: "none",
     } as CSSStyleDeclaration);
 
