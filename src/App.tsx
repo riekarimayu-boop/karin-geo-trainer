@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-// 画面最上位に被っている固定レイヤーを発見したら無効化（保険）
+
+/* 画面最上位に被ってクリックをブロックする固定レイヤーを無効化（保険） */
 (function killBadOverlays() {
   if (typeof window === "undefined") return;
   const fix = () => {
@@ -13,11 +14,9 @@ import { useEffect, useMemo, useState } from "react";
       }
     }
   };
-  // 初期描画後と、ロード完了時の2回実行
   setTimeout(fix, 0);
   window.addEventListener("load", fix);
 })();
-
 
 /***** かりんちゃん専用の褒め言葉／励まし *****/
 const PRAISE = [
@@ -36,8 +35,8 @@ const ENCOURAGE = [
   "一歩ずつ確実に！","ここで踏ん張るのが地力！",
 ];
 
-const ENABLE_SFX = true;        // 効果音ON/OFF
-const ENABLE_CONFETTI = false;  // ← ここを false に
+const ENABLE_SFX = true;       // 効果音ON/OFF
+const ENABLE_CONFETTI = false; // コンフェッティON/OFF（とりあえず無効）
 
 /***** 効果音（WebAudio） *****/
 let _ac: AudioContext | null = null;
@@ -47,79 +46,78 @@ function tone(freq:number, ms=140, type:OscillatorType="sine", gain=0.06){
   osc.type = type; osc.frequency.value = freq; g.gain.value = gain;
   osc.connect(g).connect(ctx.destination); const t = ctx.currentTime; osc.start(t); osc.stop(t+ms/1000);
 }
-function sfxOK(){ if(!ENABLE_SFX) return; tone(880,90,"triangle",.05); setTimeout(()=>tone(1175,120,"triangle",.05),90);
-  setTimeout(()=>{ tone(1568,140,"sine",.035); tone(1976,140,"sine",.03); },140); if(navigator.vibrate) navigator.vibrate(15); }
-function sfxNG(){ if(!ENABLE_SFX) return; const ctx = ac(), osc = ctx.createOscillator(), g = ctx.createGain();
+function sfxOK(){ if(!ENABLE_SFX) return;
+  tone(880,90,"triangle",.05);
+  setTimeout(()=>tone(1175,120,"triangle",.05),90);
+  setTimeout(()=>{ tone(1568,140,"sine",.035); tone(1976,140,"sine",.03); },140);
+  if(navigator.vibrate) navigator.vibrate(15);
+}
+function sfxNG(){ if(!ENABLE_SFX) return;
+  const ctx = ac(), osc = ctx.createOscillator(), g = ctx.createGain();
   osc.type="sawtooth"; osc.frequency.value=220; g.gain.value=.05; osc.connect(g).connect(ctx.destination);
-  const t=ctx.currentTime; const lfo=ctx.createOscillator(), lg=ctx.createGain(); lfo.frequency.value=7; lg.gain.value=20;
-  lfo.connect(lg).connect(osc.frequency); osc.start(t); lfo.start(t); osc.stop(t+.22); lfo.stop(t+.22);
-  if(navigator.vibrate) navigator.vibrate(60); }
+  const t=ctx.currentTime; const lfo=ctx.createOscillator(), lg=ctx.createGain();
+  lfo.frequency.value=7; lg.gain.value=20; lfo.connect(lg).connect(osc.frequency);
+  osc.start(t); lfo.start(t); osc.stop(t+.22); lfo.stop(t+.22);
+  if(navigator.vibrate) navigator.vibrate(60);
+}
 
 /***** 🎉絵文字コンフェッティ *****/
 const EMOJIS = ["🎉","🎊","✨","👏","🌟","🎈","🗺️","📍","📚","💫","⭐️","🧠","💡"];
 let confettiRoot: HTMLDivElement | null = null;
-(function(){
+
+(function injectConfettiCSS(){
   const id="emoji-confetti-style"; if(document.getElementById(id)) return;
   const style=document.createElement("style"); style.id=id;
-  style.textContent=`@keyframes fall-emoji{0%{transform:translateY(-10vh) rotate(0);opacity:0}
-  10%{opacity:1}100%{transform:translateY(110vh) rotate(720deg);opacity:.9}}`;
+  style.textContent=`@keyframes fall-emoji{
+    0%{transform:translateY(-10vh) rotate(0);opacity:0}
+    10%{opacity:1}
+    100%{transform:translateY(110vh) rotate(720deg);opacity:.9}
+  }`;
   document.head.appendChild(style);
 })();
 
-function getConfettiRoot() {
-  if (!confettiRoot) {
-    confettiRoot = document.createElement("div");
+function getConfettiRoot(){
+  if(!confettiRoot){
+    confettiRoot=document.createElement("div");
     document.body.appendChild(confettiRoot);
   }
-  Object.assign(confettiRoot.style, {
-    position: "fixed",
-    inset: "0",
-    zIndex: "0",           // 高くしない
-    pointerEvents: "none", // クリックを遮らない
-    overflow: "hidden",
+  Object.assign(confettiRoot.style,{
+    position:"fixed",
+    inset:"0",
+    zIndex:"0",            // クリックを邪魔しない
+    pointerEvents:"none",  // クリック不可
+    overflow:"hidden",
   } as CSSStyleDeclaration);
   return confettiRoot!;
 }
 
-
-function burstEmojiConfetti() {
-  if (!ENABLE_CONFETTI) return;
-  const root = getConfettiRoot();
-  const W = window.innerWidth;
-  const N = Math.min(36, Math.max(16, Math.floor(W / 25)));
-
-  for (let i = 0; i < N; i++) {
-    const span = document.createElement("span");
-    span.textContent = EMOJIS[(Math.random() * EMOJIS.length) | 0];
-
-    const left = Math.random() * 100;
-    const dur = 1.6 + Math.random() * 1.7;
-    const delay = Math.random() * 0.15;
-    const size = 18 + Math.random() * 16;
-
-    Object.assign(span.style, {
-      position: "absolute",
-      left: `${left}vw`,
-      top: "-10vh",
-      fontSize: `${size}px`,
-      animation: `fall-emoji ${dur}s linear ${delay}s 1 both`,
-      // 影をつける（ここはダブルクォートで閉じる）
-      filter: "drop-shadow(0 2px 2px rgba(0,0,0,.15))",
-      // クリックを遮らない
-      pointerEvents: "none",
+function burstEmojiConfetti(){
+  if(!ENABLE_CONFETTI) return;
+  const root=getConfettiRoot(); const W=window.innerWidth;
+  const N=Math.min(36, Math.max(16, Math.floor(W/25)));
+  for(let i=0;i<N;i++){
+    const span=document.createElement("span");
+    span.textContent=EMOJIS[(Math.random()*EMOJIS.length)|0];
+    const left=Math.random()*100, dur=1.6+Math.random()*1.7, delay=Math.random()*0.15, size=18+Math.random()*16;
+    Object.assign(span.style,{
+      position:"absolute",
+      left:`${left}vw`,
+      top:"-10vh",
+      fontSize:`${size}px`,
+      animation:`fall-emoji ${dur}s linear ${delay}s 1 both`,
+      filter:"drop-shadow(0 2px 2px rgba(0,0,0,.15))",
+      pointerEvents:"none",
     } as CSSStyleDeclaration);
-
     root.appendChild(span);
-    setTimeout(() => root.removeChild(span), (dur + delay) * 1000 + 50);
+    setTimeout(()=>root.removeChild(span),(dur+delay)*1000+50);
   }
 }
-
 
 /***** 型 *****/
 type Card = {
   id?: string; front: string; back: string; hint?: string;
-  choices?: string[];   // 明示的に4択を指定する場合
-  answer?: number;      // 上のchoicesに対する正解インデックス(0-3)
+  choices?: string[];  // 明示の4択
+  answer?: number;     // choices の正解インデックス
 };
 type Deck = { id?: string; title: string; description?: string; cards: Card[] };
 type DeckMeta = { id:string; title:string; description?:string; file?:string; path?:string; count?:number };
@@ -130,11 +128,20 @@ const BOX_INTERVAL_MS = [0, 1*60e3, 10*60e3, 60*60e3, 6*60*60e3, 24*60*60e3, 72*
 type CardState = { box:number; next:number; streak:number };
 type SaveBlob = { deckId:string; version:number; perCard:Record<string,CardState> };
 const SAVE_VERSION = 1;
+
 const now = () => Date.now();
 const keyFor = (deckId:string)=>`geo-trainer:deck:${deckId}`;
-function readSave(deckId:string):SaveBlob|null{ try{const raw=localStorage.getItem(keyFor(deckId)); if(!raw) return null;
-  const j=JSON.parse(raw) as SaveBlob; if(j.version!==SAVE_VERSION||j.deckId!==deckId) return null; return j;}catch{return null;} }
-function writeSave(deckId:string, blob:SaveBlob){ try{localStorage.setItem(keyFor(deckId), JSON.stringify(blob));}catch{} }
+function readSave(deckId:string):SaveBlob|null{
+  try{
+    const raw=localStorage.getItem(keyFor(deckId)); if(!raw) return null;
+    const j=JSON.parse(raw) as SaveBlob;
+    if(j.version!==SAVE_VERSION||j.deckId!==deckId) return null;
+    return j;
+  }catch{ return null; }
+}
+function writeSave(deckId:string, blob:SaveBlob){
+  try{ localStorage.setItem(keyFor(deckId), JSON.stringify(blob)); }catch{}
+}
 
 const INDEX_URL = "/decks/index.json";
 const deckUrl = (m:DeckMeta)=> m.path ?? (m.file ? `/decks/${m.file}` : `/decks/${m.id}.json`);
@@ -156,36 +163,27 @@ async function fetchDeckNormalized(meta:DeckMeta):Promise<Deck>{
 
 /***** ユーティリティ *****/
 function shuffle<T>(arr:T[]):T[]{ const a=[...arr]; for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [a[i],a[j]]=[a[j],a[i]]; } return a; }
-
-/** 4択データを生成（明示choicesがあればそれ優先。なければ同一デッキのbackから自動生成） */
 function buildMCQ(card:Card, deck:Deck){
-  // 明示指定がある
   if(card.choices && card.choices.length>=2){
-    // 正解が分からなければ back を探す
-    const baseChoices = [...card.choices];
-    if(!baseChoices.includes(card.back)) baseChoices[0] = card.back; // backを必ず含める
-    while(baseChoices.length<4){
-      // 足りない分は他カードから補完
-      const cand = shuffle(deck.cards.map(c=>c.back).filter(b=>b && !baseChoices.includes(b) && b!==card.back))[0];
+    const base = [...card.choices];
+    if(!base.includes(card.back)) base[0] = card.back;
+    while(base.length<4){
+      const cand = shuffle(deck.cards.map(c=>c.back).filter(b=>b && !base.includes(b) && b!==card.back))[0];
       if(!cand) break;
-      baseChoices.push(cand);
+      base.push(cand);
     }
-    const trimmed = baseChoices.slice(0,4);
-    const shuffled = shuffle(trimmed);
-    const correct = shuffled.indexOf(card.back);
-    return { choices: shuffled, correct };
+    const opts = shuffle(base.slice(0,4));
+    return { choices: opts, correct: opts.indexOf(card.back) };
   }
-  // 自動生成：back の集合から
   const uniqBacks = Array.from(new Set(deck.cards.map(c=>c.back))).filter(b=>b && b!==card.back);
-  if(uniqBacks.length<3) return null; // フォールバック
-  const distractors = shuffle(uniqBacks).slice(0,3);
-  const opts = shuffle([card.back, ...distractors]);
-  const correct = opts.indexOf(card.back);
-  return { choices: opts, correct };
+  if(uniqBacks.length<3) return null;
+  const opts = shuffle([card.back, ...shuffle(uniqBacks).slice(0,3)]);
+  return { choices: opts, correct: opts.indexOf(card.back) };
 }
 
 /***** メイン *****/
 export default function App(){
+  // ---- 状態（フックはコンポーネントの先頭で一度だけ呼ぶ！）----
   const [menus, setMenus] = useState<DeckMeta[]>([]);
   const [menuLoading, setMenuLoading] = useState(true);
   const [counts, setCounts] = useState<Record<string, number>>({});
@@ -193,18 +191,29 @@ export default function App(){
   const [save, setSave] = useState<SaveBlob|null>(null);
   const [currentIdx, setCurrentIdx] = useState<number>(0);
   const [flash, setFlash] = useState<{text:string; ok:boolean}|null>(null);
+  const [selected, setSelected] = useState<number|null>(null); // ← 先頭に移動
 
+  // ---- データ読み込み ----
   useEffect(()=>{ (async()=>{
-    try{ setMenuLoading(true); const r=await fetch(INDEX_URL,{cache:"no-store"}); const data=await r.json() as DeckMeta[]; setMenus(data); }
-    catch(e){ console.error("index.json 読み込み失敗:",e); setMenus([]); }
-    finally{ setMenuLoading(false); }
+    try{
+      setMenuLoading(true);
+      const r=await fetch(INDEX_URL,{cache:"no-store"});
+      const data=await r.json() as DeckMeta[];
+      setMenus(data);
+    }catch(e){
+      console.error("index.json 読み込み失敗:",e);
+      setMenus([]);
+    }finally{
+      setMenuLoading(false);
+    }
   })(); },[]);
 
-  // 実枚数のカウント（index.jsonのcountに頼らない）
   useEffect(()=>{ if(!menus.length) return; (async()=>{
     const entries = await Promise.all(menus.map(async m=>{
-      try{ const res=await fetch(deckUrl(m),{cache:"no-store"}); if(!res.ok) throw new Error();
-        const raw=await res.json(); const n = Array.isArray(raw?.cards)? raw.cards.length : Array.isArray(raw)? raw.length : 0;
+      try{
+        const res=await fetch(deckUrl(m),{cache:"no-store"}); if(!res.ok) throw new Error();
+        const raw=await res.json();
+        const n = Array.isArray(raw?.cards)? raw.cards.length : Array.isArray(raw)? raw.length : 0;
         return [m.id,n] as const;
       }catch{ return [m.id,0] as const; }
     }));
@@ -248,6 +257,12 @@ export default function App(){
   },[deck,save]);
 
   const card = useMemo(()=> (deck ? deck.cards[currentIdx ?? nextIndex] ?? null : null), [deck,currentIdx,nextIndex]);
+
+  // 4択データ（フックは早めに定義）
+  const mcq = useMemo(()=> (deck && card ? buildMCQ(card, deck) : null), [deck, card]);
+
+  // カード移動時に選択リセット
+  useEffect(()=>{ setSelected(null); }, [currentIdx, deck?.id]);
 
   /** 正誤反映（Leitner + 効果音/🎉/メッセージ） */
   function gradeAndAdvance(ok:boolean){
@@ -311,10 +326,6 @@ export default function App(){
   }
 
   /** ---- UI: 学習画面 ---- */
-  const mcq = useMemo(()=> (deck && card ? buildMCQ(card, deck) : null), [deck, card]);
-  const [selected, setSelected] = useState<number|null>(null);
-  useEffect(()=>{ setSelected(null); }, [currentIdx, deck?.id]);
-
   return (
     <div style={{maxWidth:980, margin:"24px auto", padding:"0 16px"}}>
       <div style={{display:"flex", alignItems:"center", gap:12}}>
@@ -347,50 +358,45 @@ export default function App(){
       )}
 
       {/* カード本体 */}
-      {card ? (
-        <div style={{marginTop:16, border:"1px solid #e5e7eb", borderRadius:12, padding:16, background:"white"}}>
-          <div style={{color:"#6b7280", fontSize:14}}>{deck.title} → {card.front}</div>
-          <h1 style={{fontSize:34, margin:"10px 0 4px 0"}}>{card.front}</h1>
+      <div style={{marginTop:16, border:"1px solid #e5e7eb", borderRadius:12, padding:16, background:"white"}}>
+        <div style={{color:"#6b7280", fontSize:14}}>{deck.title} → {card?.front}</div>
+        <h1 style={{fontSize:34, margin:"10px 0 4px 0"}}>{card?.front}</h1>
 
-          {/* --- 4択モード --- */}
-          {mcq ? (
-            <>
-              {card.hint && <div style={{margin:"6px 0 10px", color:"#6b7280"}}>ヒント: {card.hint}</div>}
-              <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginTop:8}}>
-                {mcq.choices.map((opt, i)=>{
-                  const isSelected = selected===i;
-                  const isCorrect = selected!=null && i===mcq.correct;
-                  const isWrongSelected = selected!=null && i===selected && i!==mcq.correct;
-                  const bg = isCorrect ? "#10b981" : isWrongSelected ? "#ef4444" : "#f9fafb";
-                  const color = isCorrect || isWrongSelected ? "white" : "#111827";
-                  return (
-                    <button key={i} disabled={selected!=null}
-                      onClick={()=>{ if(selected!=null) return; setSelected(i); setTimeout(()=>gradeAndAdvance(i===mcq.correct), 400); }}
-                      style={{padding:"12px", borderRadius:10, border:"1px solid #e5e7eb", background:bg, color, fontSize:18, cursor:"pointer"}}
-                    >
-                      {["①","②","③","④"][i]}　{opt}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          ) : (
-            // --- フォールバック（自己採点） ---
-            <>
-              <div style={{marginTop:12, padding:16, borderRadius:8, background:"#f9fafb", fontSize:24}}>
-                {card.back}
-                {card.hint && <div style={{marginTop:6, color:"#6b7280", fontSize:14}}>ヒント: {card.hint}</div>}
-              </div>
-              <div style={{display:"flex", gap:12, marginTop:16}}>
-                <button onClick={()=>gradeAndAdvance(false)} style={{flex:1, padding:"12px 16px", borderRadius:10, border:"none", background:"#ef4444", color:"white", fontSize:18, cursor:"pointer"}}>まだ</button>
-                <button onClick={()=>gradeAndAdvance(true)}  style={{flex:1, padding:"12px 16px", borderRadius:10, border:"none", background:"#10b981", color:"white", fontSize:18, cursor:"pointer"}}>覚えた！</button>
-              </div>
-            </>
-          )}
-        </div>
-      ) : (
-        <div style={{marginTop:24}}>カードがありません。</div>
-      )}
+        {/* 4択モード */}
+        {mcq ? (
+          <>
+            {card?.hint && <div style={{margin:"6px 0 10px", color:"#6b7280"}}>ヒント: {card.hint}</div>}
+            <div style={{display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginTop:8}}>
+              {mcq.choices.map((opt, i)=>{
+                const isCorrect = selected!=null && i===mcq.correct;
+                const isWrongSelected = selected!=null && i===selected && i!==mcq.correct;
+                const bg = isCorrect ? "#10b981" : isWrongSelected ? "#ef4444" : "#f9fafb";
+                const color = isCorrect || isWrongSelected ? "white" : "#111827";
+                return (
+                  <button key={i} disabled={selected!=null}
+                    onClick={()=>{ if(selected!=null) return; setSelected(i); setTimeout(()=>gradeAndAdvance(i===mcq.correct), 400); }}
+                    style={{padding:"12px", borderRadius:10, border:"1px solid #e5e7eb", background:bg, color, fontSize:18, cursor:"pointer"}}
+                  >
+                    {["①","②","③","④"][i]}　{opt}
+                  </button>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          // フォールバック（自己採点）
+          <>
+            <div style={{marginTop:12, padding:16, borderRadius:8, background:"#f9fafb", fontSize:24}}>
+              {card?.back}
+              {card?.hint && <div style={{marginTop:6, color:"#6b7280", fontSize:14}}>ヒント: {card.hint}</div>}
+            </div>
+            <div style={{display:"flex", gap:12, marginTop:16}}>
+              <button onClick={()=>gradeAndAdvance(false)} style={{flex:1, padding:"12px 16px", borderRadius:10, border:"none", background:"#ef4444", color:"white", fontSize:18, cursor:"pointer"}}>まだ</button>
+              <button onClick={()=>gradeAndAdvance(true)}  style={{flex:1, padding:"12px 16px", borderRadius:10, border:"none", background:"#10b981", color:"white", fontSize:18, cursor:"pointer"}}>覚えた！</button>
+            </div>
+          </>
+        )}
+      </div>
 
       <div style={{marginTop:24, color:"#6b7280", fontSize:13}}>
         学習間隔：1分 → 10分 → 1h → 6h → 24h → 72h（正解が続くほど間隔が延びます）
