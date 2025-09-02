@@ -71,12 +71,11 @@ function getConfettiRoot() {
     confettiRoot = document.createElement("div");
     document.body.appendChild(confettiRoot);
   }
-  // 既存があっても毎回「安全なスタイル」を上書き
   Object.assign(confettiRoot.style, {
     position: "fixed",
     inset: "0",
-    zIndex: "0",            // ← ここ重要！（9999 を 0 に）
-    pointerEvents: "none",  // クリックは一切拾わない
+    zIndex: "0",           // 高くしない
+    pointerEvents: "none", // クリックを遮らない
     overflow: "hidden",
   } as CSSStyleDeclaration);
   return confettiRoot!;
@@ -88,9 +87,11 @@ function burstEmojiConfetti() {
   const root = getConfettiRoot();
   const W = window.innerWidth;
   const N = Math.min(36, Math.max(16, Math.floor(W / 25)));
+
   for (let i = 0; i < N; i++) {
     const span = document.createElement("span");
     span.textContent = EMOJIS[(Math.random() * EMOJIS.length) | 0];
+
     const left = Math.random() * 100;
     const dur = 1.6 + Math.random() * 1.7;
     const delay = Math.random() * 0.15;
@@ -102,14 +103,16 @@ function burstEmojiConfetti() {
       top: "-10vh",
       fontSize: `${size}px`,
       animation: `fall-emoji ${dur}s linear ${delay}s 1 both`,
-      filter: "drop-shadow(0 2px 2px rgba(0,0,0,.15))",
-      pointerEvents: "none",  // ← ここ！オブジェクトの中に
+      filter: "drop-shadow(0 2px 2px rgba(0,0,0,.15))`,
+      /** ← これをオブジェクトの中に置く */
+      pointerEvents: "none",
     } as CSSStyleDeclaration);
 
     root.appendChild(span);
     setTimeout(() => root.removeChild(span), (dur + delay) * 1000 + 50);
   }
 }
+
 
 /***** 型 *****/
 type Card = {
